@@ -7,19 +7,18 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-//     /Users/Elias/Desktop/GE.txt
+//     /Users/Elias/Desktop/LAB/GE.txt
 public class day1 {
 	private static ArrayList<String> lines = new ArrayList<String>();
-	private static final Comparator<? super String> Comparator = null;
-	private static ArrayList<String> transcriptions = new ArrayList<String>();
+	private static final Comparator<String> Comparator = null;
+	private static HashSet<String> transcriptions = new HashSet<String>(50000);
 	private static ArrayList<String> stopWords = new ArrayList<String>();
 	public static void main(String[] args) throws IOException
 	{	
-		//CompTest();
-
 		String line = null;
 		Scanner scan = new Scanner(System.in);
 		System.out.println("give the path (including filename) for the file you would like to use: "); //get the path from the user
@@ -33,7 +32,7 @@ public class day1 {
 			e.printStackTrace();
 		}
 		BufferedReader br = new BufferedReader(fr); //take the file line by line
-			PrintStream out = new PrintStream(new FileOutputStream("/Users/Elias/Desktop/TurkishOutput.txt"));
+			PrintStream out = new PrintStream(new FileOutputStream("/Users/Elias/Desktop/FinalGerOut2.txt"));
 			System.setOut(out);
 		try {
 			while((line = br.readLine()) != null) { //assign each line to variable line
@@ -43,35 +42,22 @@ public class day1 {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}  
+		String excludeRegex=".*[^0-9<>'+.,]";
+		String lengthRegex=".(([\t ][A-Za-z]+ *)+){2,}"; //at least 3 segments
+	//	String test = "f il r u n t ts v a n ts i C s t etu n";
+	//	System.out.println(test.matches(lengthRegex));
 		for(String l : lines) getTranscription(l);
 		//add more output, say what you've completed, with a counter
 		for(String l : lines)
 		{
 			Word W = makeWord(l);
-			//transcriptions.add(W.trans);  //get the transcription for the line
-			if(getVoicelessStops2(W.trans))
+			if(getStops(W.ortho)&&W.ortho.matches(excludeRegex)&&W.trans.matches(lengthRegex)) //if it doesn't end in a non-word character
 			{
-				W.underlying= Confirm2(W.trans);
-				out.println(W.getOrtho() + "\t"	+  W.getUnderlying());
+				W.underlying= Confirm2(W);
+				out.println(W.getOrtho() + " \t"	+  W.getUnderlying());
 			}
 		}
-		/*	PrintStream out1 = new PrintStream(new FileOutputStream("output2.txt"));
-
-		PrintStream out = new PrintStream(new FileOutputStream("output.txt"));
-		System.setOut(out);*/
-
-		/*		for(String s : transcriptions) {
-	//		out1.println(s);
-			getVoicelessStops(s);
-		}  */
-		/*		for(String s: stopWords) {
-			String S =Confirm(s);
-			if(!S.equals("")) out.println(S);
-		//	System.out.println(Deny(s));
-		} 
-		 */
-
-
+	
 	}
 	/**
 	 * get just transcription, put it in ArrayList
@@ -86,19 +72,7 @@ public class day1 {
 		}
 
 	}
-	/**
-	 * add all the words ending in ptk to stopWords ArrayList
-	 * @param input
-	 */
-	/*	public static void getVoicelessStops(String input){
-		String regex = "([A-Z a-z])+[tpk] *$"; //look for just word-final voiceless stops
-		Pattern r = Pattern.compile(regex);
-		Matcher m = r.matcher(input); //match to each transcription 
-		if(m.find())
-		{
-			stopWords.add(input);
-		}
-	} */
+
 
 	public static boolean getVoicelessStops2(String input){
 		String regex = "([A-Z a-z])+[tpk] *$"; //look for just word-final voiceless stops
@@ -110,59 +84,43 @@ public class day1 {
 		}
 		return false;
 	}
-	//search through transcriptions to find positive instances
-	public static String Confirm(String root) throws FileNotFoundException
-	{
-
-		ArrayList<String> matching = new ArrayList<String>();
-		String newWord = root.substring(0,root.length()-1);
-		String newRegex = "";
-		if(root.charAt(root.length()-1) == 't')  newRegex = ".*"+newWord+"d.*"; //if it ends in t, look for ending in d
-		if(root.charAt(root.length()-1) == 'p')  newRegex = ".*"+newWord+"b.*";
-		if(root.charAt(root.length()-1) == 'k')  newRegex = ".*"+newWord+"g.*";
-
-		Pattern r = Pattern.compile(newRegex);
-		for(String t: transcriptions)
+	public static boolean getStops(String input){
+		String regex = "([A-Z a-z])+[tpkbdg] *$"; //look for just word-final voiceless stops
+		Pattern r = Pattern.compile(regex);
+		Matcher m = r.matcher(input); //match to each transcription 
+		if(m.find()&&!(input.charAt(input.length()-1)=='g'&&input.charAt(input.length()-2)=='n')) //doesn't end in -ng
 		{
-
-			Matcher m = r.matcher(t); //match to each line
-			if(m.find()) {
-				matching.add(t);
-
-			}
+			return true;
 		}
-		MyComparator comp = new MyComparator();
-		Collections.sort(matching, comp);
-		String secondRegex = newRegex.substring(0, newRegex.length()-2)+" ?[aeiou]"; //get rid of the .* after the dbg and replace it with " ?[aeiou]"
-		Pattern pat = Pattern.compile(secondRegex);
-		String S = "";
-		for(String m : matching) {
-			Matcher match = pat.matcher(m);
-			if(match.find()){
-				S =root + " has been confirmed to be underlyingly " + newRegex.substring(2,newRegex.length()-2);
-				break;
-			}
-		}
-		return S;
+		return false;
 	}
 
-	public static String Confirm2(String root) throws FileNotFoundException
-	{
 
+	public static String Confirm2(Word root) throws FileNotFoundException
+	{
+		char oEnd = root.ortho.charAt(root.ortho.length()-1);
+		//oEnd is last character of orthographic form
+		String trans = root.getTrans();
 		ArrayList<String> matching = new ArrayList<String>();
-		String newWord = root.substring(0,root.length()-1);
+		String newWord = trans.substring(0,trans.length()-1);
+	//	System.out.println(newWord+" is newWord" + " oEnd is " + oEnd);
 		String newRegex = "";
-		char oEnd =root.charAt(root.length()-1); //original end of the string
 		String endRegex = "";
-		if(oEnd == 't')  endRegex = "d.*"; //if it ends in t, look for ending in d
-		if(oEnd == 'p')  endRegex = "b.*";
-		if(oEnd == 'k')  endRegex = "g.*";
+		if(oEnd == 'd')  endRegex = "t.*"; //if ortho ends in d, look for ending in t in trans
+		else if(oEnd == 'b')  endRegex = "p.*";
+		else if(oEnd == 'g')  endRegex = "k.*";
+		else endRegex = oEnd+" ?"; //this will always be true because the space is optional, but will fix the out of bounds exception
 		newRegex = ".*"+newWord+endRegex;
+	//	System.out.println(newRegex + " is newRegex");
+		String tabRegex = "([\t ][A-Za-z]+){0,2}[\t \n]\n";
 		Pattern r = Pattern.compile(newRegex);
+		Pattern p = Pattern.compile(tabRegex);
 		for(String t: transcriptions)
 		{
-
+			//check if it adds more than 2 sounds
+			
 			Matcher m = r.matcher(t); //match to each line
+			Matcher d = p.matcher(t);
 			if(m.find()) {
 				matching.add(t); //if you find a confirmation
 			}
@@ -170,6 +128,7 @@ public class day1 {
 		MyComparator comp = new MyComparator();
 		Collections.sort(matching, comp); //comparator that sorts in increasing string length
 		String secondRegex = newRegex.substring(0, newRegex.length()-2)+" ?[aeiou]"; //get rid of the .* after the dbg and replace it with " ?[aeiou]"
+	//	System.out.println(endRegex + " is endRegex");
 		Pattern pat = Pattern.compile(secondRegex);
 		for(String m : matching) {
 			Matcher match = pat.matcher(m);
@@ -191,6 +150,7 @@ public class day1 {
 
 		String o = line.substring(0, line.indexOf("\t"));
 		W.setOrtho(o); //set the orthographic part
+		W.setLastChar(o.charAt(o.length()-1));
 		String t = getTranscription2(line);
 		W.setTrans(t); //set the transcription
 
@@ -255,5 +215,70 @@ public class day1 {
 		for(String c : C) System.out.println(c);
 
 	}*/
+
+	//search through transcriptions to find positive instances
+/*	public static String Confirm(String root) throws FileNotFoundException
+	{
+
+		ArrayList<String> matching = new ArrayList<String>();
+		String newWord = root.substring(0,root.length()-1);
+		String newRegex = "";
+		if(root.charAt(root.length()-1) == 't')  newRegex = ".*"+newWord+"d.*"; //if it ends in t, look for ending in d
+		if(root.charAt(root.length()-1) == 'p')  newRegex = ".*"+newWord+"b.*";
+		if(root.charAt(root.length()-1) == 'k')  newRegex = ".*"+newWord+"g.*";
+
+		Pattern r = Pattern.compile(newRegex);
+		for(String t: transcriptions)
+		{
+
+			Matcher m = r.matcher(t); //match to each line
+			if(m.find()) {
+				matching.add(t);
+
+			}
+		}
+		MyComparator comp = new MyComparator();
+		Collections.sort(matching, comp);
+		String secondRegex = newRegex.substring(0, newRegex.length()-2)+" ?[aeiou]"; //get rid of the .* after the dbg and replace it with " ?[aeiou]"
+		Pattern pat = Pattern.compile(secondRegex);
+		String S = "";
+		for(String m : matching) {
+			Matcher match = pat.matcher(m);
+			if(match.find()){
+				S =root + " has been confirmed to be underlyingly " + newRegex.substring(2,newRegex.length()-2);
+				break;
+			}
+		}
+		return S;
+	} */
+	/**
+	 * add all the words ending in ptk to stopWords ArrayList
+	 * @param input
+	 */
+	/*	public static void getVoicelessStops(String input){
+		String regex = "([A-Z a-z])+[tpk] *$"; //look for just word-final voiceless stops
+		Pattern r = Pattern.compile(regex);
+		Matcher m = r.matcher(input); //match to each transcription 
+		if(m.find())
+		{
+			stopWords.add(input);
+		}
+	} */
+	/*	PrintStream out1 = new PrintStream(new FileOutputStream("output2.txt"));
+
+	PrintStream out = new PrintStream(new FileOutputStream("output.txt"));
+	System.setOut(out);*/
+
+	/*		for(String s : transcriptions) {
+//		out1.println(s);
+		getVoicelessStops(s);
+	}  */
+	/*		for(String s: stopWords) {
+		String S =Confirm(s);
+		if(!S.equals("")) out.println(S);
+	//	System.out.println(Deny(s));
+	} 
+	 */
+
 
 }
