@@ -33,14 +33,9 @@ class Word(object):
 #	return w
 
 def getStops(input):
-	regex = re.compile("([A-Z a-z])+[tpkbdg] *$") #look for just word-final voiceless stops
+	regex = re.compile("([A-Z a-z])+[tpk] *$") #look for just word-final voiceless stops
 	m = regex.match(input)
-
 	if m is not None:
-		match = m.group(0)
-		lastChar = match[len(match)-1]
-		penult = match[len(match)-2]
-	if m is not None and not (lastChar =='g' and penult == 'n'):
 		return True
 	return False
 
@@ -57,27 +52,21 @@ def Confirm2(line2, trans):
 	oEnd = root.ortho[len(root.ortho)-1]
 	#just look at individual word objects, if oEnd is voiced and trans end is not
 	#start by looking for voicelss stops in the transcription
-	matching = []
-	newWord = root.trans[0:len(root.trans)-1]
-	newRegex = ""
-	endRegex = ""
-	if oEnd == 'd':
-		endRegex = "t.*" #if ortho end in d look for words ending in t
-	elif oEnd == 'b':
-		endRegex = "p.*"
-	elif oEnd == 'g':
-		endRegex = "k.*"
-	newRegex = ".*" + newWord + endRegex
-	for t in trans:
-		match = re.match(newRegex, t)
-		if match is not None and firstC(root) == t[0]:
-			matching.append(t)
-	sorted(matching, key=lambda x: -1*len(x))
-	secondRegex = newRegex[0:len(newRegex)-2] + " ?[aieou]"
-	for m in matching:
-		nMatch = re.match(newRegex, m)
-		if nMatch is not None:
-			return endRegex[0:len(endRegex)-2]
+	
+
+
+
+
+	#for t in trans:
+	#	match = re.match(newRegex, t)
+#		if match is not None and firstC(root) == t[0]:
+#			matching.append(t)
+#	sorted(matching, key=lambda x: -1*len(x))
+#	secondRegex = newRegex[0:len(newRegex)-2] + " ?[aieou]"
+#	for m in matching:
+#		nMatch = re.match(newRegex, m)
+#		if nMatch is not None:
+#			return endRegex[0:len(endRegex)-2]
 	return "" +oEnd
 
 
@@ -86,20 +75,22 @@ def Confirm2(line2, trans):
 def main(path):
 	with open(path, "r") as f:
 		lines = f.readlines() #works
-	excludeRegex=re.compile(r".*\w$") #.*[^0-9<>'+.,]
+	excludeRegex=re.compile("[^%<*$'0-9].*[^0-9<>'+.,=ze]$") #.*[^0-9<>'+.,] not weird symbols and such r".*\w$"
+	orthoStopRegex = re.compile(".*[ptkbdg]$") #make sure ortho ends in ptkbdg
 	#lengthRegex=re.compile(".(([\t ][A-Za-z]+ *)+){2,}") #at least 3 segments
-	with open("/Users/Elias/Desktop/printFile.txt", "w") as f2:
+	with open("/Users/Elias/Desktop/printFile3.txt", "w") as f2:
 
 
 
 		trans = GetTranscription(lines)
 		for l in lines :
 			w = Word(l)
-	#print(w.ortho)
+		
 			orthoMatch = excludeRegex.match(w.ortho.strip())
+			orthoStopMatch = orthoStopRegex.match(w.ortho.strip())
 		#	transMatch = lengthRegex.match(w.trans) #and transMatch is not None
-	#print(w.trans)
-			if getStops(w.ortho) and (orthoMatch is not None ):
+	
+			if getStops(w.trans) and (orthoMatch is not None ) and orthoStopMatch is not None:  #look for transcriptions that end in voiceless stop
 				w.underlying = Confirm2(l, trans)		
 				
 				f2.write(w.ortho + "\t" + w.underlying + "\n")
